@@ -2,12 +2,18 @@ import express from "express";
 import dotenv from "dotenv";
 import scrapEvents from "./scraper.js";
 import eventModel from "./models/event.model.js";
+import scrapModel from "./models/scraper.model.js";
 
 dotenv.config();
 const app=express();
 
 async function saveEventsInDB(){
     const events=await scrapEvents();
+
+    if(!events||events.length===0){
+        console.log("No events scraped");
+        return;
+    }
 
     for(const event of events){
         const createdEvent=await eventModel.updateOne({
@@ -16,7 +22,7 @@ async function saveEventsInDB(){
             $set:{
                 title:event.title||null,
                 dateTime:event.date||null,
-                description:events.description||null,
+                description:event.description||null,
                 sourceWebsite:event.sourceWebsite||null
             },
             $setOnInsert:{
@@ -30,11 +36,133 @@ async function saveEventsInDB(){
         if(createdEvent.upsertedCount===1){
             console.log("New event inserted");
         }
-        else if(createdEvent.modifiedCount===1){
+        else if(createdEvent.matchedCount===1){
+            console.log("Event already exists (no update required)");
+        }
+        else{
             console.log("Event updated");
         }
     }
 }
-saveEventsInDB();
+
+async function runScraping(){
+    const scraper=await scrapModel.findOne({
+        key:"event-scraper"
+    });
+
+    if(!scraper){
+        await scrapModel.create({
+            key:"event-scraper",
+            status:"running",
+        });
+
+        try{
+            await saveEventsInDB();
+
+            await scrapModel.updateOne({
+                key:"event-scraper"
+            },{
+                $set:{
+                    status:"idle",
+                    lastScrapedAt:new Date(),
+                    lastRunResult:"success"
+                }
+            });
+        }
+        catch(err){
+            console.log("Scraping failed:",err);
+
+            await scrapModel.updateOne({
+                key:"event-scraper"
+            },{
+                status:"idle",
+                lastRunResult:"failed"
+            });
+        }
+        finally{
+            return;
+        }
+    }
+
+    if(scraper.status==="running") return;
+
+    if(!scraper.lastScrapedAt){
+        await scrapModel.updateOne({
+            key:"event-scraper"
+        },{
+            $set:{
+                status:"running"
+            }
+        },{upsert:true});
+
+        try{
+            await saveEventsInDB();
+
+            await scrapModel.updateOne({
+                key:"event-scraper"
+            },{
+                $set:{
+                    status:"idle",
+                    lastScrapedAt:new Date(),
+                    lastRunResult:"success"
+                }
+            });
+        }
+        catch(err){
+            console.log("Scraping failed:",err);
+
+            await scrapModel.updateOne({
+                key:"event-scraper"
+            },{
+                status:"idle",
+                lastRunResult:"failed"
+            });
+        }
+        finally{
+            return;
+        }
+    }
+
+    const SIX_HOURS=6*60*60*1000;
+    const now=new Date();
+    if((now-scraper.lastScrapedAt)>=SIX_HOURS){
+        await scrapModel.updateOne({
+            key:"event-scraper"
+        },{
+            $set:{
+                status:"running"
+            }
+        },{upsert:true});
+
+        try{
+            await saveEventsInDB();
+
+            await scrapModel.updateOne({
+                key:"event-scraper"
+            },{
+                $set:{
+                    status:"idle",
+                    lastScrapedAt:new Date(),
+                    lastRunResult:"success"
+                }
+            });
+        }
+        catch(err){
+            console.log("Scraping failed:",err);
+
+            await scrapModel.updateOne({
+                key:"event-scraper"
+            },{
+                status:"idle",
+                lastRunResult:"failed"
+            });
+        }
+        finally{
+            return;
+        }
+    }
+} 
+
+runScraping();
 
 export default app;
