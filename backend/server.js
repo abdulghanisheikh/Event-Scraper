@@ -1,9 +1,16 @@
 import app from "./src/app.js";
-import {connectToDB} from "./src/configs/database.js";
+import mongoose from "mongoose";
 
-const PORT=process.env.PORT||3000;
-connectToDB();
+const MONGO_URI=process.env.MONGO_URI;
+const PORT=process.env.PORT;
 
-app.listen(PORT,()=>{
-    console.log(`server started on port ${PORT}`);
+mongoose.connect(MONGO_URI)
+.then(()=>{
+    console.log("Database connected");
+    app.listen(PORT,()=>{
+        console.log(`server on ${PORT}`);
+    });
+})
+.catch(()=>{
+    console.log("Database connected failed");
 });
