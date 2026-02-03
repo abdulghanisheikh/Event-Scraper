@@ -3,9 +3,19 @@ import dotenv from "dotenv";
 import scrapEvents from "./scraper.js";
 import eventModel from "./models/event.model.js";
 import scrapModel from "./models/scraper.model.js";
+import eventRouter from "./routes/events.js";
+import authRouter from "./routes/auth.js";
+import cors from "cors";
 
 dotenv.config();
 const app=express();
+app.use(express.json());
+app.use(cors({
+    origin:process.env.FRONTEND_URL||"http://localhost:5173"
+}));
+
+app.use("/api/auth",authRouter);
+app.use("/api/events",eventRouter);
 
 async function saveEventsInDB(){
     const events=await scrapEvents();
@@ -162,7 +172,5 @@ async function runScraping(){
         }
     }
 } 
-
-runScraping();
 
 export default app;

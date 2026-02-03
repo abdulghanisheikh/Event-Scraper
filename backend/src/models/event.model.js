@@ -13,6 +13,10 @@ const eventSchema=new mongoose.Schema({
         type:String,
         default:"updated"
     },
+    isApproved:{
+        type:Boolean,
+        default:false
+    },
     posterUrl:{
         type:String,
         default:null
@@ -27,7 +31,7 @@ const eventSchema=new mongoose.Schema({
     },
     lastScrapedTime:{
         type:Date,
-        default:Date.now
+        default:new Date().getTime()
     }
 });
 
