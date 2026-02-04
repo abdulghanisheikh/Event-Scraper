@@ -1,36 +1,5 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-
-const EventsTable = () => {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(()=>{
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('authToken');
-      
-      const response = await axios.get('http://localhost:3000/api/events',{
-        headers:{
-          Authorization:`Bearer ${token}`
-        }
-      });
-
-      setEvents(response.data.events||[]);
-      setError(null);
-    } catch(err){
-      console.error('Failed to fetch events:', err);
-      setError('Failed to load events');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+const EventsTable=({events,error,loading,fetchEvents})=>{
+  
   if(loading){
     return (
       <div className="flex justify-center items-center p-8">
@@ -39,29 +8,26 @@ const EventsTable = () => {
     );
   }
 
-  if (error) {
+  if (error){
     return(
-      <div className='flex flex-col gap-4'>
-        <p className='lg:text-3xl text-2xl'>Events Table</p>
-        <div className="bg-gray-900 border-3 border-gray-700 text-white p-4 rounded-md">
-          <p>{error}</p>
+        <div className="flex flex-col justify-center items-center py-5 mt-10">
+          <p className='self-center'>{error}</p>
           <button
             onClick={fetchEvents}
-            className="mt-2 bg-red-700 hover:bg-red-600 px-6 py-1 rounded transition cursor-pointer"
+            className="mt-2 bg-red-700 hover:bg-red-600 px-6 py-1 w-fit rounded transition cursor-pointer"
           >
             Retry
           </button>
         </div>
-      </div>
     );
   }
 
   return (
     <div className="bg-zinc-800 p-4 lg:p-6 rounded-lg">
       <div className="flex justify-between items-center mb-4 lg:mb-4">
-        <h2 className="text-white text-xl lg:text-2xl font-bold">Events</h2>
+        <h2 className="text-white text-xl lg:text-2xl font-bold">Events Table</h2>
         <button
-          onClick={fetchEvents}
+          onClick={()=>fetchEvents()}
           className="bg-blue-600 hover:bg-blue-700 text-white px-3 lg:px-4 py-2 rounded transition text-sm lg:text-base"
         >
           Refresh
@@ -72,7 +38,6 @@ const EventsTable = () => {
         <p className="text-zinc-400 text-center py-8">No events found</p>
       ) : (
         <>
-          {/* Desktop Table View */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
@@ -110,7 +75,6 @@ const EventsTable = () => {
             </table>
           </div>
 
-          {/* Mobile Card View */}
           <div className="lg:hidden space-y-4">
             {events.map((event) => (
               <div key={event._id} className="bg-zinc-700 rounded-lg p-4 border border-zinc-600">
